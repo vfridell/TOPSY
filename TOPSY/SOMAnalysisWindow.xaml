@@ -1,0 +1,29 @@
+﻿<Window x:Class="TOPSY.SOMAnalysisWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:TOPSY"
+        mc:Ignorable="d"
+        Title="SOMAnalysisWindow" Height="300" Width="300">
+    <Grid Name="AppGrid">
+        <Canvas Name="MainCanvas" ClipToBounds="True" 
+                        VerticalAlignment="Top" HorizontalAlignment="Left"
+                        Height="250"
+                        Width="272"
+                            Grid.Column="0" Background="Aqua" Margin="10,10,0,0">
+            <Canvas.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Open" Command="{Binding OpenCommand}"></MenuItem>
+                </ContextMenu>
+            </Canvas.ContextMenu>
+            <Canvas.RenderTransform>
+                <TransformGroup x:Name="transformGroup">
+                    <ScaleTransform x:Name="scaleTransform"/>
+                    <TranslateTransform x:Name="translateTransform"/>
+                </TransformGroup>
+            </Canvas.RenderTransform>
+        </Canvas>
+
+    </Grid>
+</Window>

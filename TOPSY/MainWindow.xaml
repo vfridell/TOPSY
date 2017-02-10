@@ -1,0 +1,28 @@
+﻿<Window x:Class="TOPSY.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:TOPSY"
+        Title="TOPSY" Height="400" Width="525" Loaded="Window_Loaded">
+    <DockPanel>
+        <ToolBarTray DockPanel.Dock="Top">
+            <ToolBar>
+                <Button Content="Load Lattice" Command="ApplicationCommands.Open" />
+            </ToolBar>
+        </ToolBarTray>
+        <Grid Height ="50" DockPanel.Dock="Bottom" >
+            <Button Click="Analyze_OnClick" Height="25" Width="50" VerticalAlignment="Center">Analyze</Button>
+            <Button Click="Test_OnClick" Height="26" Width="50" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,12,166,12">Test</Button>
+        </Grid>
+        <Grid DockPanel.Dock="Bottom" >
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="5" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <local:ComparisonDataViewer />
+            <GridSplitter Grid.Column="1"/>
+            <local:FileInfoTextArea Grid.Column="2" />
+        </Grid>
+
+    </DockPanel>
+</Window>
