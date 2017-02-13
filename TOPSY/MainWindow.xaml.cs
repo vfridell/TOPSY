@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -28,29 +29,39 @@ namespace TOPSY
             InitializeComponent();
         }
 
-        private void Analyze_OnClick(object sender, RoutedEventArgs e)
+        private async void Analyze_OnClick(object sender, RoutedEventArgs e)
         {
-            SOMAnalysisWindow analysisWindow = new SOMAnalysisWindow();
-            SOMTrainer trainer = new SOMTrainer();
-            int numberOfItems = AnalysisDataRepository.AnalysisDataList[0].GetSomWeightsVector().Count;
-            SOMLattice lattice = new SOMLattice(10, 10, numberOfItems);
-            lattice.Initialize();
-            List<SOMWeightsVector> weightsList =
-                AnalysisDataRepository.AnalysisDataList.Select(a => a.GetSomWeightsVector()).ToList();
-            analysisWindow.Show();
-            //trainer.Train2(lattice, weightsList, new LatticeRenderer(analysisWindow));
-            trainer.Train(lattice, weightsList, new LatticeRenderer(analysisWindow)).ContinueWith((t) => {
+            try
+            {
+                if (AnalysisDataRepository.AnalysisDataList.Count == 0) return;
+
+                int numberOfItems = AnalysisDataRepository.AnalysisDataList[0].GetSomWeightsVector().Count;
+                SOMLattice lattice = new SOMLattice(20, 20, numberOfItems);
+                lattice.Initialize();
+                SOMTrainer trainer = new SOMTrainer();
+                List<SOMWeightsVector> weightsList = AnalysisDataRepository.AnalysisDataList.Select(a => a.GetSomWeightsVector()).ToList();
+
+                SOMAnalysisWindow analysisWindow = new SOMAnalysisWindow();
+                Progress<int> progressReport = new Progress<int>((i) => ProgressBar1.Value = i);
+                await Task.Run(() => trainer.Train(lattice, weightsList, progressReport, CancellationToken.None), CancellationToken.None);
+                analysisWindow.Render(lattice, 0);
+                analysisWindow.Render(lattice);
+                analysisWindow.Show();
                 SOMLattice.WriteLatticeData(lattice);
-            });
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
         }
 
         private void Test_OnClick(object sender, RoutedEventArgs e)
         {
+            SOMLattice lattice = new SOMLattice(20, 20, 3);
             SOMAnalysisWindow analysisWindow = new SOMAnalysisWindow();
-            SOMLattice lattice = new SOMLattice(10, 10, 3);
             lattice.InitializeTest();
-            var renderer = new LatticeRenderer(analysisWindow);
-            renderer.Render(lattice, 1);
+            analysisWindow.Render(lattice, 1);
             analysisWindow.Show();
         }
 
@@ -72,8 +83,7 @@ namespace TOPSY
                 {
                     var lattice = (SOMLattice) formatter.Deserialize(stream);
                     SOMAnalysisWindow analysisWindow = new SOMAnalysisWindow();
-                    var renderer = new LatticeRenderer(analysisWindow);
-                    renderer.Render(lattice, 1);
+                    analysisWindow.Render(lattice, 1);
                     analysisWindow.Show();
                 }
             }

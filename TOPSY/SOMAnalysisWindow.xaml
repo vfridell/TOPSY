@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TOPSY"
         mc:Ignorable="d"
-        Title="SOMAnalysisWindow" Height="300" Width="300">
+        Title="SOMAnalysisWindow" Height="300" Width="473.304">
     <Grid Name="AppGrid">
         <Canvas Name="MainCanvas" ClipToBounds="True" 
                         VerticalAlignment="Top" HorizontalAlignment="Left"
@@ -24,6 +24,7 @@
                 </TransformGroup>
             </Canvas.RenderTransform>
         </Canvas>
+        <TextBlock x:Name="detailsTextBlock" HorizontalAlignment="Left" Height="250" Margin="287,10,0,0" TextWrapping="Wrap" Text="Node Details" VerticalAlignment="Top" Width="168"/>
 
     </Grid>
 </Window>
