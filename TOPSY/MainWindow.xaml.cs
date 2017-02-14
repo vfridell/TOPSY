@@ -41,11 +41,12 @@ namespace TOPSY
                 SOMTrainer trainer = new SOMTrainer();
                 List<SOMWeightsVector> weightsList = AnalysisDataRepository.AnalysisDataList.Select(a => a.GetSomWeightsVector()).ToList();
 
-                SOMAnalysisWindow analysisWindow = new SOMAnalysisWindow();
+                SOMAnalysisWindow analysisWindow = new SOMAnalysisWindow(lattice);
                 Progress<int> progressReport = new Progress<int>((i) => ProgressBar1.Value = i);
                 await Task.Run(() => trainer.Train(lattice, weightsList, progressReport, CancellationToken.None), CancellationToken.None);
-                analysisWindow.Render(lattice, 0);
-                analysisWindow.Render(lattice);
+                analysisWindow.CategorizeData(AnalysisDataRepository.AnalysisDataList);
+                analysisWindow.RenderColors();
+                analysisWindow.RenderCounts();
                 analysisWindow.Show();
                 SOMLattice.WriteLatticeData(lattice);
 
@@ -59,9 +60,9 @@ namespace TOPSY
         private void Test_OnClick(object sender, RoutedEventArgs e)
         {
             SOMLattice lattice = new SOMLattice(20, 20, 3);
-            SOMAnalysisWindow analysisWindow = new SOMAnalysisWindow();
+            SOMAnalysisWindow analysisWindow = new SOMAnalysisWindow(lattice);
             lattice.InitializeTest();
-            analysisWindow.Render(lattice, 1);
+            analysisWindow.RenderColors();
             analysisWindow.Show();
         }
 
@@ -82,8 +83,9 @@ namespace TOPSY
                         FileShare.None))
                 {
                     var lattice = (SOMLattice) formatter.Deserialize(stream);
-                    SOMAnalysisWindow analysisWindow = new SOMAnalysisWindow();
-                    analysisWindow.Render(lattice, 1);
+                    SOMAnalysisWindow analysisWindow = new SOMAnalysisWindow(lattice);
+                    analysisWindow.RenderColors();
+                    analysisWindow.RenderCounts();
                     analysisWindow.Show();
                 }
             }

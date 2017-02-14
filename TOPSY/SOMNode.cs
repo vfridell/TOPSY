@@ -208,7 +208,7 @@ namespace TOPSY
             _weightsVector = new SOMWeightsVector();
             for (int i = 0; i < numWeights; i++)
             {
-                _weightsVector.Add(_rand.NextDouble());
+                _weightsVector.Add(_rand.Next(0,99));
             }
         }
 

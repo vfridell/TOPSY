@@ -20,6 +20,7 @@ namespace TOPSY
         private int _totalLines;
         private int _firstLineLength;
         private bool _headerExists;
+        private char _mostCommonSpecialChar;
 
         //private double _avgCharactersPerLineSquashed;
         //private double _totalLinesSquashed;  //1/(1 + e^(.001*(5000-x)))
@@ -34,12 +35,13 @@ namespace TOPSY
         public int MinLengthLine => _lineLengthHistogram.Min(kvp => kvp.Key);
         public string Filename => _filename;
         public int NumberOfDistinctSpecialChars => _specialCharacterHistogram.Keys.Count;
+        public char MostCommonSpecialChar => _mostCommonSpecialChar;
 
         public SOMWeightsVector GetSomWeightsVector()
         {
             SOMWeightsVector vector = new SOMWeightsVector();
             vector.Add(_avgCharactersPerLine);
-            vector.Add(_stdDevLineLength);
+            //vector.Add(_stdDevLineLength);
             vector.Add(NumberOfDistinctSpecialChars);
             return vector;
         }
@@ -49,6 +51,7 @@ namespace TOPSY
             StringBuilder sb = new StringBuilder();
             sb.Append($"Filename: {Filename}\n");
             sb.Append($"Total Chars: {TotalCharacters}\n");
+            sb.Append($"Most Common Special Character: {MostCommonSpecialChar}\n");
             sb.Append($"Distinct Special Characters: {NumberOfDistinctSpecialChars}\n");
             sb.Append($"Total Lines: {TotalLines}\n");
             sb.Append($"Max Line Length: {MaxLengthLine}\n");
@@ -134,6 +137,7 @@ namespace TOPSY
             }
             analysisData._stdDevLineLength = Math.Sqrt(analysisData._stdDevLineLength / (analysisData._totalLines - 2));
             //analysisData._headerExists
+            analysisData._mostCommonSpecialChar = analysisData._specialCharacterHistogram.OrderByDescending(kvp => kvp.Value).First().Key;
             return analysisData;
         }
 
