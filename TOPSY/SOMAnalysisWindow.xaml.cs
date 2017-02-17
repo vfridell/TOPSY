@@ -93,8 +93,8 @@ namespace TOPSY
 
             byte red = GetColorFromWeight(node.GetWeight(0));
             byte green = GetColorFromWeight(node.GetWeight(1));
-            //byte blue = GetColorFromWeight(node.GetWeight(2));
-            rect.Fill =  new SolidColorBrush(Color.FromRgb(red, green, 0));
+            byte blue = GetColorFromWeight(node.GetWeight(2));
+            rect.Fill =  new SolidColorBrush(Color.FromRgb(red, green, blue));
 
             //rect.Fill = Brushes.Tan;
             //double imageXOffset = rect.Width / 2;
@@ -109,9 +109,10 @@ namespace TOPSY
 
         private byte GetColorFromWeight(double weight)
         {
-            //int squashedValue = (int)(1.0 / (1.0 + Math.Exp(5.0 - (5.0 * weight / 128.0))));
-            double expandedValue = weight * 256.0;
-            byte b = (byte) expandedValue;
+            int squashedValue = (int)(1.0 / (1.0 + Math.Exp(5.0 - (5.0 * weight / 128.0))));
+            byte b = (byte)squashedValue;
+            //double expandedValue = weight * 256.0;
+            //byte b = (byte) expandedValue;
             return b;
         }
     }

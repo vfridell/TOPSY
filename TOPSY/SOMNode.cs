@@ -242,7 +242,7 @@ namespace TOPSY
         public double EuclideanDistance(SOMWeightsVector other)
         {
             if (other.Count != Count)
-                throw  new Exception("Vectors must have the same number of elements");
+                throw new Exception("Vectors must have the same number of elements");
 
             double sum = 0;
             for (int i = 0; i < Count; i++)

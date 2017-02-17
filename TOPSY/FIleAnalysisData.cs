@@ -4,6 +4,7 @@ using System.Diagnostics.Eventing.Reader;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace TOPSY
@@ -12,6 +13,7 @@ namespace TOPSY
     {
         private string _filename;
         private Dictionary<char, int> _specialCharacterHistogram = new Dictionary<char, int>();
+        private Dictionary<char, int> _regularCharacterHistogram = new Dictionary<char, int>();
         private Dictionary<int, int> _lineLengthHistogram = new Dictionary<int, int>();
         private Dictionary<char, int> _columnsByDelimiter = new Dictionary<char, int>();
         private double _avgCharactersPerLine;
@@ -21,12 +23,20 @@ namespace TOPSY
         private int _firstLineLength;
         private bool _headerExists;
         private char _mostCommonSpecialChar;
+        private double _ratioMostCommonSecondMost;
+        private bool _crlfTerminated;
+        private double _ratioSpecialCharToRegular;
+        private int _firstLineNumWords;
+        private double _ratioCRtoLF;
+        private int _totalWords;
+        private char _secondMostCommonSpecialChar;
 
         //private double _avgCharactersPerLineSquashed;
         //private double _totalLinesSquashed;  //1/(1 + e^(.001*(5000-x)))
 
         public int TotalLines => _totalLines;
         public int TotalCharacters => _totalCharacters;
+        public int TotalWords=> _totalWords;
         public bool HeaderExists => _headerExists;
         public int FirstLineLength => _firstLineLength;
         public double AvgCharactersPerLine => _avgCharactersPerLine;
@@ -36,13 +46,25 @@ namespace TOPSY
         public string Filename => _filename;
         public int NumberOfDistinctSpecialChars => _specialCharacterHistogram.Keys.Count;
         public char MostCommonSpecialChar => _mostCommonSpecialChar;
+        public char SecondMostCommonSpecialChar => _secondMostCommonSpecialChar;
+        public double RatioMostCommonSecondMost => _ratioMostCommonSecondMost;
+        public double RatioSpecialCharToRegular => _ratioSpecialCharToRegular;
+        public bool CRLF_Terminated => _crlfTerminated;
+        public double RatioCR_to_LF => _ratioCRtoLF;
+        public int FirstLineNumWords => _firstLineNumWords;
+        public double RatioFirstLineWordsToAverageWords => (double)_firstLineNumWords/((double)_totalWords/_totalLines);
 
         public SOMWeightsVector GetSomWeightsVector()
         {
             SOMWeightsVector vector = new SOMWeightsVector();
-            vector.Add(_avgCharactersPerLine);
+            //vector.Add(_avgCharactersPerLine);
             //vector.Add(_stdDevLineLength);
             vector.Add(NumberOfDistinctSpecialChars);
+            vector.Add(RatioSpecialCharToRegular);
+            vector.Add(MostCommonSpecialChar);
+            vector.Add(SecondMostCommonSpecialChar);
+            //vector.Add(RatioMostCommonSecondMost);
+            //vector.Add(CRLF_Terminated ? 1.0 : 0.0);
             return vector;
         }
 
@@ -51,14 +73,25 @@ namespace TOPSY
             StringBuilder sb = new StringBuilder();
             sb.Append($"Filename: {Filename}\n");
             sb.Append($"Total Chars: {TotalCharacters}\n");
-            sb.Append($"Most Common Special Character: {MostCommonSpecialChar}\n");
+            sb.Append($"Most Common Special Character: " + (char.IsControl(MostCommonSpecialChar) ? $"<{(int)MostCommonSpecialChar}>\n" : $"{MostCommonSpecialChar}\n"));
+            sb.Append($"Second Most Common Special Character: " + (char.IsControl(SecondMostCommonSpecialChar) ? $"<{(int)SecondMostCommonSpecialChar}>\n" : $"{SecondMostCommonSpecialChar}\n"));
+            sb.Append($"First to Second Special Character Ratio: {RatioMostCommonSecondMost}\n");
+            sb.Append($"Special Character To Regular Character Ratio: {RatioSpecialCharToRegular}\n");
             sb.Append($"Distinct Special Characters: {NumberOfDistinctSpecialChars}\n");
+            sb.Append($"Number of 'words' on the First Line: {FirstLineNumWords}\n");
+            sb.Append($"Average 'words' per Line: {((double)_totalWords / _totalLines)}\n");
+            sb.Append($"Ratio of 'words' on the First Line to Average Words per line: {RatioFirstLineWordsToAverageWords}\n");
+            sb.Append($"CRLF Terminated: {CRLF_Terminated}\n");
+            sb.Append($"Ratio CR to LF: {RatioCR_to_LF}\n");
             sb.Append($"Total Lines: {TotalLines}\n");
             sb.Append($"Max Line Length: {MaxLengthLine}\n");
             sb.Append($"Min Line Length: {MinLengthLine}\n");
             sb.Append($"First Line Length: {FirstLineLength}\n");
             sb.Append($"Avg Chars per Line: {AvgCharactersPerLine}\n");
             sb.Append($"Std Deviation Chars per Line: {StdDeviationCharsPerLine}\n");
+
+            sb.Append("==== Regular Chars Histogram ====\n");
+            AppendHistogram(_regularCharacterHistogram, sb);
 
             sb.Append("==== Special Chars Histogram ====\n");
             foreach (KeyValuePair<char, int> kvp in _specialCharacterHistogram.OrderByDescending(kvp => kvp.Value))
@@ -70,12 +103,17 @@ namespace TOPSY
             }
             
             sb.Append("==== Line Length Histogram ====\n");
-            foreach (KeyValuePair<int,int> kvp in _lineLengthHistogram.OrderByDescending(kvp => kvp.Value))
+            AppendHistogram(_lineLengthHistogram, sb);
+
+            return sb.ToString();
+        }
+
+        public void AppendHistogram<T, Q>(Dictionary<T, Q> histogram, StringBuilder sb)
+        {
+            foreach (KeyValuePair<T, Q> kvp in histogram.OrderByDescending(kvp => kvp.Value))
             {
                 sb.Append($"{kvp.Key} => {kvp.Value}\n");
             }
-
-            return sb.ToString();
         }
 
         public static FileAnalysisData GetFileAnalysisData(string filename, IFileType fileType)
@@ -89,9 +127,10 @@ namespace TOPSY
             byte space = 0x20;
             byte pipe = 0x7C;
             byte backslash = 0x5c;
-            byte recordSeperator = 0x1E;
             char EOF = '\uffff';
             byte[] finalByte = {lineFeed};
+            byte carriageReturn = 0x0D;
+            int lineBufferSize = 2048;
 
             FileAnalysisData analysisData = new FileAnalysisData();
             analysisData._filename = filename;
@@ -99,17 +138,26 @@ namespace TOPSY
             analysisData._totalLines = 0;
             analysisData._avgCharactersPerLine = 0.0;
             analysisData._stdDevLineLength = 0.0;
+            analysisData._totalWords = 0;
+            Regex wordlikeRegex = new Regex(@"[ \w][ \w][ \w]+");
             using (TextReader reader = new StreamReader(File.OpenRead(filename)))
             {
                 char c = (char) reader.Read();
                 int charactersThisLine = 0;
+                var thisLine = new char[lineBufferSize];
                 while (c != EOF)
                 {
+                    if(charactersThisLine < lineBufferSize) thisLine[charactersThisLine] = c;
                     charactersThisLine++;
-                    if (c != space && (char.IsControl(c) || char.IsSeparator(c) || char.IsPunctuation(c)))
+                    if (c != space && (char.IsControl(c) || char.IsSeparator(c) || char.IsPunctuation(c) || char.IsHighSurrogate(c) || char.IsLowSurrogate(c) || char.IsSymbol(c)))
                     {
                         if (!analysisData._specialCharacterHistogram.ContainsKey(c)) analysisData._specialCharacterHistogram.Add(c, 0);
                         analysisData._specialCharacterHistogram[c]++;
+                    }
+                    else
+                    {
+                        if (!analysisData._regularCharacterHistogram.ContainsKey(c)) analysisData._regularCharacterHistogram.Add(c, 0);
+                        analysisData._regularCharacterHistogram[c]++;
                     }
                     if (c == lineFeed)
                     {
@@ -122,22 +170,45 @@ namespace TOPSY
                         analysisData._totalLines++;
                         analysisData._avgCharactersPerLine += (charactersThisLine - tmpM) / analysisData._totalLines;
                         analysisData._stdDevLineLength += (charactersThisLine - tmpM) * (charactersThisLine - analysisData._avgCharactersPerLine);
-                        if (analysisData._totalLines == 1) analysisData._firstLineLength = charactersThisLine;
+
+                        analysisData._totalWords += wordlikeRegex.Matches(new string(thisLine)).Count;
+                        if (analysisData._totalLines == 1)
+                        {
+                            analysisData._firstLineLength = charactersThisLine;
+                            analysisData._firstLineNumWords = analysisData._totalWords;
+                        }
                         charactersThisLine = 0;
+
+                        thisLine = new char[lineBufferSize];
                     }
                     c = (char) reader.Read();
                 }
             }
+                               
+            analysisData._ratioCRtoLF = 0.0;
+            if (analysisData._specialCharacterHistogram.ContainsKey((char) lineFeed) &&
+                analysisData._specialCharacterHistogram.ContainsKey((char) carriageReturn))
+            {
+                analysisData._ratioCRtoLF = (double)analysisData._specialCharacterHistogram[(char) carriageReturn] / analysisData._specialCharacterHistogram[(char) lineFeed];
+                analysisData._crlfTerminated = analysisData._specialCharacterHistogram[(char)lineFeed] == analysisData._specialCharacterHistogram[(char)carriageReturn];
+            }
 
+            if (analysisData._crlfTerminated) analysisData._specialCharacterHistogram.Remove((char) carriageReturn);
 
             if (analysisData.TotalCharacters > 0 && analysisData._totalLines == 0)
             {
                 analysisData._totalLines = 1;
                 analysisData._firstLineLength = analysisData._totalCharacters;
             }
+
+            analysisData._ratioSpecialCharToRegular = (double)analysisData._specialCharacterHistogram.Values.Sum()/
+                                                      analysisData._regularCharacterHistogram.Values.Sum();
             analysisData._stdDevLineLength = Math.Sqrt(analysisData._stdDevLineLength / (analysisData._totalLines - 2));
             //analysisData._headerExists
-            analysisData._mostCommonSpecialChar = analysisData._specialCharacterHistogram.OrderByDescending(kvp => kvp.Value).First().Key;
+            var orderedSpecialCharHistogram = analysisData._specialCharacterHistogram.OrderByDescending(kvp => kvp.Value);
+            analysisData._mostCommonSpecialChar = orderedSpecialCharHistogram.First().Key;
+            analysisData._secondMostCommonSpecialChar = orderedSpecialCharHistogram.Take(2).Last().Key;
+            analysisData._ratioMostCommonSecondMost = (double)orderedSpecialCharHistogram.First().Value / orderedSpecialCharHistogram.ToList()[1].Value;
             return analysisData;
         }
 
