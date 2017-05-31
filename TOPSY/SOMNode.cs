@@ -17,7 +17,6 @@ namespace TOPSY
 
         private double _latticeRadius;
         private double _timeConstant;
-        private LatticeRenderer _renderer;
 
         public SOMTrainer() { }
 
@@ -39,57 +38,10 @@ namespace TOPSY
         }
 
         // Train the given lattice based on a vector of input vectors
-        public async Task Train(SOMLattice lattice, List<SOMWeightsVector> inputVectorsList,
-            LatticeRenderer latticeRenderer)
+        public void Train(SOMLattice lattice, List<SOMWeightsVector> inputVectorsList, IProgress<int> progressReport, CancellationToken token )
         {
-            _renderer = latticeRenderer;
-            await Task.Factory.StartNew(() =>
-            {
-                _latticeRadius = Math.Max(lattice.Height, lattice.Width)/2;
-                _timeConstant = _numIterations/Math.Log(_latticeRadius);
-                int iteration = 0;
-                double distanceFallOff;
-                double learningRate = _startLearningRate;
-
-                while (iteration < _numIterations)
-                {
-                    double neighborhoodRadius = GetNeighborhoodRadius(iteration);
-                    foreach (SOMWeightsVector currentVector in inputVectorsList)
-                    {
-                        SOMNode bmuNode = lattice.GetBestMatchingUnitNode(currentVector);
-
-                        for (int x = (int)-neighborhoodRadius + bmuNode.X; x <= neighborhoodRadius + bmuNode.X; x++)
-                        {
-                            int minY = (int)Math.Max(-neighborhoodRadius + bmuNode.Y, -x - neighborhoodRadius);
-                            int maxY = (int)Math.Min(neighborhoodRadius + bmuNode.Y, -x + neighborhoodRadius);
-                            for (int y = minY; y <= maxY; y++)
-                            {
-                                if(x < 0 || y < 0) continue;
-                                double distance = bmuNode.Distance(lattice.GetNode(x, y));
-                                if (distance <= neighborhoodRadius * neighborhoodRadius)
-                                {
-                                    distanceFallOff = GetDistanceFallOff(distance, neighborhoodRadius);
-                                    lattice.GetNode(x,y).AdjustWeights(currentVector, learningRate, distanceFallOff);
-                                }
-                            }
-                        }
-
-                    }
-                    iteration++;
-                    learningRate = _startLearningRate*Math.Exp(-(double)iteration/_numIterations);
-                    _renderer.Render(lattice, iteration);
-                }
-            }
-            , CancellationToken.None
-            , TaskCreationOptions.None
-            , TaskScheduler.FromCurrentSynchronizationContext());
-        }
-
-        public void Train2(SOMLattice lattice, List<SOMWeightsVector> inputVectorsList, LatticeRenderer latticeRenderer)
-        {
-            _renderer = latticeRenderer;
-            _latticeRadius = Math.Max(lattice.Height, lattice.Width) / 2;
-            _timeConstant = _numIterations / Math.Log(_latticeRadius);
+            _latticeRadius = Math.Max(lattice.Height, lattice.Width)/2;
+            _timeConstant = _numIterations/Math.Log(_latticeRadius);
             int iteration = 0;
             double distanceFallOff;
             double learningRate = _startLearningRate;
@@ -107,22 +59,23 @@ namespace TOPSY
                         int maxY = (int)Math.Min(neighborhoodRadius + bmuNode.Y, -x + neighborhoodRadius);
                         for (int y = minY; y <= maxY; y++)
                         {
-                            if (x < 0 || y < 0) continue;
+                            if(x < 0 || y < 0) continue;
                             double distance = bmuNode.Distance(lattice.GetNode(x, y));
                             if (distance <= neighborhoodRadius * neighborhoodRadius)
                             {
                                 distanceFallOff = GetDistanceFallOff(distance, neighborhoodRadius);
-                                lattice.AdjustWeights(x, y, currentVector, learningRate, distanceFallOff);
+                                lattice.GetNode(x,y).AdjustWeights(currentVector, learningRate, distanceFallOff);
                             }
+                            token.ThrowIfCancellationRequested();
                         }
                     }
-
                 }
                 iteration++;
-                learningRate = _startLearningRate * Math.Exp(-(double)iteration / _numIterations);
-                _renderer.Render(lattice, iteration);
+                learningRate = _startLearningRate*Math.Exp(-(double)iteration/_numIterations);
+                progressReport.Report(iteration / (_numIterations/100));
             }
         }
+
     }
 
 // ReSharper disable once InconsistentNaming
@@ -255,7 +208,7 @@ namespace TOPSY
             _weightsVector = new SOMWeightsVector();
             for (int i = 0; i < numWeights; i++)
             {
-                _weightsVector.Add(_rand.NextDouble());
+                _weightsVector.Add(_rand.Next(0,99));
             }
         }
 
@@ -289,7 +242,7 @@ namespace TOPSY
         public double EuclideanDistance(SOMWeightsVector other)
         {
             if (other.Count != Count)
-                throw  new Exception("Vectors must have the same number of elements");
+                throw new Exception("Vectors must have the same number of elements");
 
             double sum = 0;
             for (int i = 0; i < Count; i++)

@@ -12,6 +12,7 @@
         <Grid Height ="50" DockPanel.Dock="Bottom" >
             <Button Click="Analyze_OnClick" Height="25" Width="50" VerticalAlignment="Center">Analyze</Button>
             <Button Click="Test_OnClick" Height="26" Width="50" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,12,166,12">Test</Button>
+            <ProgressBar Name="ProgressBar1" HorizontalAlignment="Left" Height="10" Margin="396,12,0,0" VerticalAlignment="Top" Width="100"/>
         </Grid>
         <Grid DockPanel.Dock="Bottom" >
             <Grid.ColumnDefinitions>
