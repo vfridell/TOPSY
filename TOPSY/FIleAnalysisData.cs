@@ -73,16 +73,6 @@ namespace TOPSY
             StringBuilder sb = new StringBuilder();
             sb.Append($"Filename: {Filename}\n");
             sb.Append($"Total Chars: {TotalCharacters}\n");
-            sb.Append($"Most Common Special Character: " + (char.IsControl(MostCommonSpecialChar) ? $"<{(int)MostCommonSpecialChar}>\n" : $"{MostCommonSpecialChar}\n"));
-            sb.Append($"Second Most Common Special Character: " + (char.IsControl(SecondMostCommonSpecialChar) ? $"<{(int)SecondMostCommonSpecialChar}>\n" : $"{SecondMostCommonSpecialChar}\n"));
-            sb.Append($"First to Second Special Character Ratio: {RatioMostCommonSecondMost}\n");
-            sb.Append($"Special Character To Regular Character Ratio: {RatioSpecialCharToRegular}\n");
-            sb.Append($"Distinct Special Characters: {NumberOfDistinctSpecialChars}\n");
-            sb.Append($"Number of 'words' on the First Line: {FirstLineNumWords}\n");
-            sb.Append($"Average 'words' per Line: {((double)_totalWords / _totalLines)}\n");
-            sb.Append($"Ratio of 'words' on the First Line to Average Words per line: {RatioFirstLineWordsToAverageWords}\n");
-            sb.Append($"CRLF Terminated: {CRLF_Terminated}\n");
-            sb.Append($"Ratio CR to LF: {RatioCR_to_LF}\n");
             sb.Append($"Total Lines: {TotalLines}\n");
             sb.Append($"Max Line Length: {MaxLengthLine}\n");
             sb.Append($"Min Line Length: {MinLengthLine}\n");
