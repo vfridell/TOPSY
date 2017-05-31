@@ -49,6 +49,7 @@ namespace TOPSY
             StringBuilder sb = new StringBuilder();
             sb.Append($"Filename: {Filename}\n");
             sb.Append($"Total Chars: {TotalCharacters}\n");
+            sb.Append($"Distinct Special Chars: {NumberOfDistinctSpecialChars}\n");
             sb.Append($"Total Lines: {TotalLines}\n");
             sb.Append($"Max Line Length: {MaxLengthLine}\n");
             sb.Append($"Min Line Length: {MinLengthLine}\n");
